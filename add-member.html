@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Member — GYMOS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div id="toastContainer" class="toast-container"></div>
+  <div class="sidebar-overlay"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><i class="bi bi-dumbbell"></i> GYMOS</div>
+      <nav class="sidebar-nav" id="sidebarNav"></nav>
+      <div class="sidebar-footer" id="sidebarFooter"></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="mobileToggle"><i class="bi bi-list"></i></button>
+          <h2>Add Member</h2>
+        </div>
+        <div class="topbar-right"></div>
+      </header>
+      <div class="page-content">
+        <div class="page-header">
+          <h1>Add Member</h1>
+          <p>Register a new member</p>
+        </div>
+
+        <div class="card" style="max-width:800px">
+          <form id="memberForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <input type="text" class="form-control" id="fullName" required placeholder="John Doe">
+              </div>
+              <div class="form-group">
+                <label>Age <span class="required">*</span></label>
+                <input type="number" class="form-control" id="age" required min="1" max="150" placeholder="25">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Phone <span class="required">*</span></label>
+                <input type="tel" class="form-control" id="phone" required placeholder="+1 (555) 000-0000">
+              </div>
+              <div class="form-group">
+                <label>Gender</label>
+                <select class="form-control" id="gender">
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Weight (kg)</label>
+                <input type="number" class="form-control" id="weight" step="0.1" placeholder="75">
+              </div>
+              <div class="form-group">
+                <label>Height (cm)</label>
+                <input type="number" class="form-control" id="height" step="0.1" placeholder="175">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea class="form-control" id="notes" rows="2" placeholder="Any additional information..."></textarea>
+            </div>
+
+            <hr style="border-color:var(--border);margin:24px 0">
+
+            <h3 style="font-size:var(--text-base);font-weight:700;margin-bottom:16px">Membership Details</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Membership Plan <span class="required">*</span></label>
+                <select class="form-control" id="planId" required>
+                  <option value="">Select plan...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Start Date <span class="required">*</span></label>
+                <input type="date" class="form-control" id="startDate" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Extra Services</label>
+              <div id="servicesList" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
+            </div>
+
+            <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:20px;margin:20px 0">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <span style="font-size:var(--text-sm);color:var(--text-muted)">Plan Price:</span>
+                <span style="font-weight:700" id="planPrice">$0.00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px">
+                <span style="font-size:var(--text-sm);color:var(--text-muted)">Services Total:</span>
+                <span style="font-weight:700" id="servicesPrice">$0.00</span>
+              </div>
+              <hr style="border-color:var(--border);margin:12px 0">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <span style="font-size:var(--text-base);font-weight:700">Total:</span>
+                <span style="font-size:var(--text-xl);font-weight:800;color:var(--primary)" id="totalPrice">$0.00</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Member Photo</label>
+              <input type="file" class="form-control file-input" id="photo" accept="image/*">
+              <span class="form-hint">Optional. Max 5MB. JPG, PNG, WEBP.</span>
+              <img id="photoPreview" class="form-photo-preview" style="display:none">
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:24px">
+              <button type="submit" class="btn btn-primary btn-lg" id="saveBtn"><i class="bi bi-check-lg"></i> Save Member</button>
+              <a href="members.html" class="btn btn-ghost btn-lg"><i class="bi bi-x"></i> Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { requireAuth } from './js/auth.js';
+    import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
+    import { calculateEndDate, generateMemberId, uploadPhoto, getPhotoFile, showToast, showLoading, hideLoading } from './js/utils.js';
+
+    const user = await requireAuth();
+    renderSidebar('members');
+    initTopbar('Add Member');
+    pageTransition();
+
+    document.getElementById('startDate').valueAsDate = new Date();
+
+    const { data: plans } = await supabase.from('plans').select('*').eq('is_active', true);
+    const { data: services } = await supabase.from('services').select('*').eq('is_active', true);
+
+    const planSelect = document.getElementById('planId');
+    (plans || []).forEach(p => {
+      planSelect.innerHTML += `<option value="${p.id}" data-price="${p.price}" data-days="${p.duration_days}">${p.name} — $${p.price}</option>`;
+    });
+
+    const servicesContainer = document.getElementById('servicesList');
+    (services || []).forEach(s => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg-hover);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition-fast);font-size:var(--text-sm)';
+      label.innerHTML = `<input type="checkbox" data-service-id="${s.id}" data-price="${s.price}" style="accent-color:var(--primary)"> ${s.name} <span style="color:var(--text-muted)">+$${s.price}</span>`;
+      label.querySelector('input').addEventListener('change', updatePricing);
+      servicesContainer.appendChild(label);
+    });
+
+    function updatePricing() {
+      const selected = planSelect.options[planSelect.selectedIndex];
+      const planPrice = selected?.dataset?.price ? parseFloat(selected.dataset.price) : 0;
+
+      let servicesPrice = 0;
+      document.querySelectorAll('[data-service-id]:checked').forEach(cb => {
+        servicesPrice += parseFloat(cb.dataset.price) || 0;
+      });
+
+      document.getElementById('planPrice').textContent = `$${planPrice.toFixed(2)}`;
+      document.getElementById('servicesPrice').textContent = `$${servicesPrice.toFixed(2)}`;
+      document.getElementById('totalPrice').textContent = `$${(planPrice + servicesPrice).toFixed(2)}`;
+    }
+
+    planSelect.addEventListener('change', updatePricing);
+    updatePricing();
+
+    document.getElementById('photo').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const preview = document.getElementById('photoPreview');
+          preview.src = ev.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById('memberForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('saveBtn');
+      const original = showLoading(btn, 'Saving...');
+
+      try {
+        const fullName = document.getElementById('fullName').value.trim();
+        const age = parseInt(document.getElementById('age').value);
+        const phone = document.getElementById('phone').value.trim();
+        const weight = document.getElementById('weight').value ? parseFloat(document.getElementById('weight').value) : null;
+        const height = document.getElementById('height').value ? parseFloat(document.getElementById('height').value) : null;
+        const gender = document.getElementById('gender').value || null;
+        const notes = document.getElementById('notes').value.trim() || null;
+        const planId = document.getElementById('planId').value;
+        const startDate = document.getElementById('startDate').value;
+
+        const selectedPlan = plans.find(p => p.id === planId);
+        const endDate = calculateEndDate(startDate, selectedPlan.duration_days);
+        const memberId = generateMemberId();
+
+        let photoUrl = null;
+        const photoFile = document.getElementById('photo').files[0];
+        if (photoFile) {
+          const fileCheck = getPhotoFile({ target: { files: [photoFile] } });
+          if (fileCheck) {
+            photoUrl = await uploadPhoto(photoFile);
+          }
+        }
+
+        const { data: member, error: mErr } = await supabase.from('members').insert({
+          member_id: memberId,
+          full_name: fullName,
+          age,
+          phone,
+          weight,
+          height,
+          gender,
+          notes,
+          photo_url: photoUrl
+        }).select().single();
+
+        if (mErr) throw mErr;
+
+        const planPrice = parseFloat(selectedPlan.price);
+        let servicesPrice = 0;
+        const selectedServiceIds = [];
+        document.querySelectorAll('[data-service-id]:checked').forEach(cb => {
+          servicesPrice += parseFloat(cb.dataset.price) || 0;
+          selectedServiceIds.push(cb.dataset.serviceId);
+        });
+
+        const { data: sub, error: subErr } = await supabase.from('subscriptions').insert({
+          member_id: member.id,
+          plan_id: planId,
+          start_date: startDate,
+          end_date: endDate,
+          plan_price: planPrice,
+          services_price: servicesPrice,
+          total_price: planPrice + servicesPrice,
+          status: 'active'
+        }).select().single();
+
+        if (subErr) throw subErr;
+
+        for (const sid of selectedServiceIds) {
+          const svc = services.find(s => s.id === sid);
+          await supabase.from('service_assignments').insert({
+            subscription_id: sub.id,
+            service_id: sid,
+            price: svc?.price || 0
+          });
+        }
+
+        await supabase.from('payments').insert({
+          member_id: member.id,
+          subscription_id: sub.id,
+          amount: planPrice + servicesPrice,
+          payment_type: 'subscription',
+          paid_at: startDate
+        });
+
+        showToast('Member added successfully!');
+        setTimeout(() => { window.location.href = `member.html?id=${member.id}`; }, 500);
+      } catch (err) {
+        showToast(err.message || 'Error saving member', 'error');
+        hideLoading(btn, original);
+      }
+    });
+  </script>
+</body>
+</html>

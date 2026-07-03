@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Member Profile — GYMOS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div id="toastContainer" class="toast-container"></div>
+  <div class="sidebar-overlay"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><i class="bi bi-dumbbell"></i> GYMOS</div>
+      <nav class="sidebar-nav" id="sidebarNav"></nav>
+      <div class="sidebar-footer" id="sidebarFooter"></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="mobileToggle"><i class="bi bi-list"></i></button>
+          <h2>Member Profile</h2>
+        </div>
+        <div class="topbar-right"></div>
+      </header>
+      <div class="page-content">
+        <div id="profileContainer" style="text-align:center;padding:40px">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { requireAuth } from './js/auth.js';
+    import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
+    import { formatDate, formatCurrency, getStatusLabel, getStatusBadgeClass, calculateDaysRemaining, showToast } from './js/utils.js';
+
+    (async () => {
+      const user = await requireAuth();
+      renderSidebar('members');
+      initTopbar('Member Profile');
+      pageTransition();
+
+      const params = new URLSearchParams(window.location.search);
+      const memberId = params.get('id');
+
+      if (!memberId) {
+        document.getElementById('profileContainer').innerHTML = '<p class="text-danger">No member ID provided</p>';
+        return;
+      }
+
+      const { data: member, error: mErr } = await supabase.from('members').select('*').eq('id', memberId).single();
+      if (mErr || !member) {
+        document.getElementById('profileContainer').innerHTML = '<p class="text-danger">Member not found</p>';
+        return;
+      }
+
+    const { data: subscriptions } = await supabase.from('subscriptions').select('*').eq('member_id', memberId).order('created_at', { ascending: false });
+    const { data: payments } = await supabase.from('payments').select('*').eq('member_id', memberId).order('created_at', { ascending: false });
+    const { data: services } = await supabase.from('services').select('*');
+    const { data: plansList } = await supabase.from('plans').select('id, name');
+    const planMap = {};
+    (plansList || []).forEach(p => { planMap[p.id] = p.name; });
+
+    const currentSub = subscriptions?.[0];
+    let assignedServices = [];
+    if (currentSub) {
+      const { data: sas } = await supabase.from('service_assignments').select('*, services:service_id(*)').eq('subscription_id', currentSub.id);
+      assignedServices = sas || [];
+    }
+
+    const status = currentSub ? currentSub.status : 'expired';
+    const badgeClass = getStatusBadgeClass(status);
+    const statusLabel = getStatusLabel(status);
+    const daysLeft = currentSub ? calculateDaysRemaining(currentSub.end_date) : 0;
+    const initials = member.full_name ? member.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+
+    const container = document.getElementById('profileContainer');
+    container.innerHTML = `
+      <div class="profile-container">
+        <div class="profile-card">
+          <div class="profile-cover"></div>
+          <div class="profile-header">
+            <div class="profile-photo">
+              ${member.photo_url
+                ? `<img src="${member.photo_url}" alt="${member.full_name}">`
+                : `<div class="profile-photo-fallback">${initials}</div>`}
+            </div>
+            <div class="profile-heading">
+              <h1>${member.full_name}</h1>
+              <div class="member-id">${member.member_id || ''}</div>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <span class="badge ${badgeClass} badge-lg">${statusLabel}</span>
+                ${daysLeft > 0 ? `<span class="badge badge-info badge-lg">${daysLeft} day${daysLeft !== 1 ? 's' : ''} left</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-body">
+            <div class="profile-info-grid">
+              <div class="profile-info-item"><span class="label">Age</span><span class="value">${member.age || '-'}</span></div>
+              <div class="profile-info-item"><span class="label">Phone</span><span class="value">${member.phone || '-'}</span></div>
+              <div class="profile-info-item"><span class="label">Gender</span><span class="value">${member.gender || '-'}</span></div>
+              <div class="profile-info-item"><span class="label">Weight</span><span class="value">${member.weight ? member.weight + ' kg' : '-'}</span></div>
+              <div class="profile-info-item"><span class="label">Height</span><span class="value">${member.height ? member.height + ' cm' : '-'}</span></div>
+              <div class="profile-info-item"><span class="label">Member Since</span><span class="value">${formatDate(member.created_at)}</span></div>
+            </div>
+
+            ${currentSub ? `
+              <div class="profile-section">
+                <h3><i class="bi bi-boxes"></i> Subscription</h3>
+                <div class="profile-info-grid">
+                  <div class="profile-info-item"><span class="label">Plan</span><span class="value">${planMap[currentSub.plan_id] || currentSub.plan_id || '-'}</span></div>
+                  <div class="profile-info-item"><span class="label">Start Date</span><span class="value">${formatDate(currentSub.start_date)}</span></div>
+                  <div class="profile-info-item"><span class="label">End Date</span><span class="value">${formatDate(currentSub.end_date)}</span></div>
+                  <div class="profile-info-item"><span class="label">Plan Price</span><span class="value">${formatCurrency(currentSub.plan_price)}</span></div>
+                  <div class="profile-info-item"><span class="label">Services</span><span class="value">${formatCurrency(currentSub.services_price)}</span></div>
+                  <div class="profile-info-item"><span class="label">Total Paid</span><span class="value" style="color:var(--primary)">${formatCurrency(currentSub.total_price)}</span></div>
+                </div>
+              </div>` : ''}
+
+            ${assignedServices.length > 0 ? `
+              <div class="profile-section">
+                <h3><i class="bi bi-gear"></i> Extra Services</h3>
+                <div class="service-tokens">
+                  ${assignedServices.map(sa => `
+                    <span class="service-token"><i class="bi bi-check-circle"></i> ${sa.services?.name || 'Service'}</span>
+                  `).join('')}
+                </div>
+              </div>` : ''}
+
+            ${payments && payments.length > 0 ? `
+              <div class="profile-section">
+                <h3><i class="bi bi-currency-dollar"></i> Payment History</h3>
+                <div class="table-container">
+                  <div class="table-wrapper">
+                    <table class="table">
+                      <thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Method</th></tr></thead>
+                      <tbody>
+                        ${payments.slice(0, 10).map(p => `
+                          <tr>
+                            <td>${formatDate(p.paid_at)}</td>
+                            <td style="font-weight:600">${formatCurrency(p.amount)}</td>
+                            <td>${p.payment_type}</td>
+                            <td>${p.payment_method || '-'}</td>
+                          </tr>`).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>` : ''}
+
+            ${member.notes ? `
+              <div class="profile-section">
+                <h3><i class="bi bi-sticky"></i> Notes</h3>
+                <p style="font-size:var(--text-sm);color:var(--text-secondary);background:var(--bg-hover);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--border)">${member.notes}</p>
+              </div>` : ''}
+
+            <div class="profile-section">
+              <h3><i class="bi bi-qr-code"></i> QR Code</h3>
+              <div class="qr-display" id="qrContainer"></div>
+              <div class="qr-actions">
+                <button class="btn btn-outline btn-sm" id="downloadQR"><i class="bi bi-download"></i> Download QR</button>
+                <button class="btn btn-outline btn-sm" id="printQR"><i class="bi bi-printer"></i> Print QR</button>
+              </div>
+            </div>
+
+            <div class="profile-actions">
+              <a href="edit-member.html?id=${memberId}" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit Member</a>
+              ${currentSub ? `<button class="btn btn-success" id="renewBtn"><i class="bi bi-arrow-repeat"></i> Renew Subscription</button>` : ''}
+              <a href="members.html" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Back to Members</a>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    // Generate QR Code
+    const qrContainer = document.getElementById('qrContainer');
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(qrContainer, {
+        text: `${window.location.origin}${window.location.pathname.replace('member.html', 'member.html')}?id=${memberId}`,
+        width: 180,
+        height: 180,
+        colorDark: '#ffffff',
+        colorLight: '#000000',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    document.getElementById('downloadQR')?.addEventListener('click', () => {
+      const canvas = qrContainer.querySelector('canvas');
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = `qrcode-${member.member_id || memberId}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    });
+
+    document.getElementById('printQR')?.addEventListener('click', () => {
+      const canvas = qrContainer.querySelector('canvas');
+      if (canvas) {
+        const win = window.open('');
+        win.document.write(`<img src="${canvas.toDataURL('image/png')}" onload="window.print();window.close()">`);
+      }
+    });
+
+    document.getElementById('renewBtn')?.addEventListener('click', async () => {
+      window.location.href = `add-member.html?renew=${memberId}`;
+    });
+    })();
+  </script>
+</body>
+</html>

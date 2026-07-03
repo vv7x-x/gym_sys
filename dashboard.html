@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — GYMOS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Ctext x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-weight='bold'%3EG%3C/text%3E%3C/svg%3E">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="toastContainer" class="toast-container"></div>
+  <div class="sidebar-overlay"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <i class="bi bi-dumbbell"></i>
+        GYMOS
+      </div>
+      <nav class="sidebar-nav" id="sidebarNav"></nav>
+      <div class="sidebar-footer" id="sidebarFooter"></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="mobileToggle"><i class="bi bi-list"></i></button>
+          <h2>Dashboard</h2>
+        </div>
+        <div class="topbar-right"></div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <h1>Dashboard</h1>
+          <p>Your gym at a glance</p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="quick-actions">
+          <a href="add-member.html" class="btn btn-primary btn-lg"><i class="bi bi-person-plus"></i> Add Member</a>
+          <a href="members.html" class="btn btn-outline btn-lg"><i class="bi bi-people"></i> View Members</a>
+          <a href="revenue.html" class="btn btn-outline btn-lg"><i class="bi bi-currency-dollar"></i> Revenue</a>
+          <a href="plans.html" class="btn btn-outline btn-lg"><i class="bi bi-boxes"></i> Plans</a>
+        </div>
+
+        <div class="dash-grid">
+          <div class="dash-card">
+            <h3><i class="bi bi-clock"></i> Recent Members</h3>
+            <div id="recentMembers"><p class="text-muted">Loading...</p></div>
+          </div>
+          <div class="dash-card">
+            <h3><i class="bi bi-exclamation-triangle"></i> Expiring Soon</h3>
+            <div id="expiringSoon"><p class="text-muted">Loading...</p></div>
+          </div>
+        </div>
+
+        <div class="dash-grid" style="grid-template-columns: 1fr 1fr">
+          <div class="dash-card">
+            <h3><i class="bi bi-graph-up"></i> Monthly Revenue</h3>
+            <div class="chart-container" style="height:280px">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+          <div class="dash-card">
+            <h3><i class="bi bi-pie-chart"></i> Membership Distribution</h3>
+            <div class="chart-container" style="height:280px">
+              <canvas id="planChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card" style="margin-top:20px">
+          <h3><i class="bi bi-activity"></i> Recent Activity</h3>
+          <div id="recentActivity"><p class="text-muted">Loading...</p></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { requireAuth } from './js/auth.js';
+    import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
+    import { formatDate, formatCurrency, getSubscriptionStatus, getStatusLabel, getStatusBadgeClass, calculateDaysRemaining, showToast } from './js/utils.js';
+
+    (async () => {
+      const user = await requireAuth();
+      if (!user) { window.location.href = 'login.html'; return; }
+
+      renderSidebar('dashboard');
+      initTopbar('Dashboard');
+      pageTransition();
+
+      const { data: members, error: mErr } = await supabase.from('members').select('*').order('created_at', { ascending: false });
+      if (mErr) { showToast('Error loading data', 'error'); return; }
+
+      const { data: subscriptions, error: sErr } = await supabase.from('subscriptions').select('*');
+      if (sErr) { showToast('Error loading subscriptions', 'error'); return; }
+
+      const { data: payments, error: pErr } = await supabase.from('payments').select('*');
+      if (pErr) { showToast('Error loading payments', 'error'); return; }
+
+      const memberList = members || [];
+      const subList = subscriptions || [];
+      const paymentList = payments || [];
+
+      const activeSubs = subList.filter(s => s.status === 'active' || s.status === 'expiring_soon');
+      const expiredSubs = subList.filter(s => s.status === 'expired');
+      const expiringSubs = subList.filter(s => s.status === 'expiring_soon');
+
+      const todayRevenue = paymentList
+        .filter(p => p.paid_at === new Date().toISOString().split('T')[0])
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      const monthStr = monthStart.toISOString().split('T')[0];
+      const monthRevenue = paymentList
+        .filter(p => p.paid_at >= monthStr)
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const totalRevenue = paymentList.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const statsGrid = document.getElementById('statsGrid');
+      statsGrid.innerHTML = `
+        <div class="stat-card blue">
+          <div class="stat-icon blue"><i class="bi bi-people"></i></div>
+          <div class="stat-info">
+            <div class="stat-number" id="statTotal">${memberList.length}</div>
+            <div class="stat-label">Total Members</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green"><i class="bi bi-check-circle"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${activeSubs.length}</div>
+            <div class="stat-label">Active Subscriptions</div>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon yellow"><i class="bi bi-clock"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${expiringSubs.length}</div>
+            <div class="stat-label">Expiring Soon</div>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon red"><i class="bi bi-x-circle"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${expiredSubs.length}</div>
+            <div class="stat-label">Expired</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green"><i class="bi bi-currency-dollar"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${formatCurrency(todayRevenue)}</div>
+            <div class="stat-label">Today's Revenue</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon blue"><i class="bi bi-calendar"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${formatCurrency(monthRevenue)}</div>
+            <div class="stat-label">This Month</div>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon purple"><i class="bi bi-cash-stack"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">${formatCurrency(totalRevenue)}</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon yellow"><i class="bi bi-graph-up-arrow"></i></div>
+          <div class="stat-info">
+            <div class="stat-number">+${memberList.length > 0 ? Math.round((activeSubs.length / memberList.length) * 100) : 0}%</div>
+            <div class="stat-label">Active Rate</div>
+          </div>
+        </div>
+      `;
+
+      animateNumbers();
+
+      const recentContainer = document.getElementById('recentMembers');
+      const sorted = [...memberList].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+      if (sorted.length === 0) {
+        recentContainer.innerHTML = '<p class="text-muted">No members yet</p>';
+      } else {
+        recentContainer.innerHTML = sorted.map((m, i) => {
+          const sub = subList.find(s => s.member_id === m.id);
+          const status = sub ? getStatusLabel(sub.status) : 'No Plan';
+          const badgeClass = sub ? getStatusBadgeClass(sub.status) : 'badge-info';
+          return `
+            <div class="recent-item" style="animation:fadeUp 0.3s ease ${i * 0.08}s both">
+              <img src="${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.full_name) + '&background=1e3a5f&color=fff&size=40'}" alt="${m.full_name}">
+              <div class="recent-item-info">
+                <strong><a href="member.html?id=${m.id}" style="color:var(--text-primary)">${m.full_name}</a></strong>
+                <small>${formatDate(m.created_at)}</small>
+              </div>
+              <span class="badge ${badgeClass}">${status}</span>
+            </div>`;
+        }).join('');
+      }
+
+      const expiringContainer = document.getElementById('expiringSoon');
+      const expiring = subList
+        .filter(s => s.status === 'expiring_soon')
+        .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
+        .slice(0, 5);
+      if (expiring.length === 0) {
+        expiringContainer.innerHTML = '<p class="text-muted">No members expiring soon</p>';
+      } else {
+        expiringContainer.innerHTML = expiring.map((s, i) => {
+          const m = memberList.find(mem => mem.id === s.member_id);
+          const days = calculateDaysRemaining(s.end_date);
+          return `
+            <div class="recent-item" style="animation:fadeUp 0.3s ease ${i * 0.08}s both">
+              <img src="${m?.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m?.full_name || 'U') + '&background=1e3a5f&color=fff&size=40'}" alt="${m?.full_name || 'Unknown'}">
+              <div class="recent-item-info">
+                <strong><a href="member.html?id=${s.member_id}" style="color:var(--text-primary)">${m?.full_name || 'Unknown'}</a></strong>
+                <small>${days} day${days !== 1 ? 's' : ''} left</small>
+              </div>
+              <span class="badge badge-expiring">${days}d</span>
+            </div>`;
+        }).join('');
+      }
+
+      const activityContainer = document.getElementById('recentActivity');
+      const recentPayments = paymentList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+      if (recentPayments.length === 0) {
+        activityContainer.innerHTML = '<p class="text-muted">No recent activity</p>';
+      } else {
+        activityContainer.innerHTML = recentPayments.map((p, i) => {
+          const m = memberList.find(mem => mem.id === p.member_id);
+          return `
+            <div class="recent-item" style="animation:fadeUp 0.3s ease ${i * 0.05}s both">
+              <div class="stat-icon green" style="width:36px;height:36px;font-size:0.9em;">
+                <i class="bi bi-currency-dollar"></i>
+              </div>
+              <div class="recent-item-info">
+                <strong>${formatCurrency(p.amount)} payment</strong>
+                <small>${m?.full_name || 'Unknown member'} &middot; ${formatDate(p.paid_at)}</small>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      if (window.Chart) {
+        const { data: plansList } = await supabase.from('plans').select('id, name');
+        const planMap = {};
+        (plansList || []).forEach(p => { planMap[p.id] = p.name; });
+
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const revenueByMonth = Array(12).fill(0);
+        paymentList.forEach(p => {
+          const d = new Date(p.paid_at);
+          const m = d.getMonth();
+          revenueByMonth[m] += Number(p.amount);
+        });
+
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{
+              label: 'Revenue',
+              data: revenueByMonth,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59,130,246,0.1)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#3b82f6',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#64748b', font: { size: 11 } }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: '#64748b', font: { size: 11 } }
+              }
+            }
+          }
+        });
+
+        const planCounts = {};
+        subList.forEach(s => {
+          const plan = planMap[s.plan_id] || 'Unknown';
+          planCounts[plan] = (planCounts[plan] || 0) + 1;
+        });
+
+        new Chart(document.getElementById('planChart'), {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(planCounts),
+            datasets: [{
+              data: Object.values(planCounts),
+              backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#94a3b8', padding: 16, font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+
+      function animateNumbers() {
+        document.querySelectorAll('.stat-number').forEach(el => {
+          const target = parseInt(el.textContent.replace(/[^0-9.-]/g, ''));
+          if (isNaN(target) || el.textContent.includes('$')) return;
+          el.textContent = '0';
+          const duration = 800;
+          const start = performance.now();
+          function update(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(target * eased);
+            if (progress < 1) requestAnimationFrame(update);
+          }
+          requestAnimationFrame(update);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
