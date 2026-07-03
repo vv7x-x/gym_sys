@@ -27,21 +27,21 @@
       </header>
       <div class="page-content">
         <div class="page-header">
-          <h1>Revenue</h1>
-          <p>Track your gym's financial performance</p>
+          <h1 data-i18n="revenue.title">Revenue</h1>
+          <p data-i18n="revenue.subtitle">Track your gym's financial performance</p>
         </div>
 
         <div class="stats-grid" id="revenueCards"></div>
 
         <div class="dash-grid">
           <div class="dash-card">
-            <h3><i class="bi bi-graph-up"></i> Revenue Over Time</h3>
+            <h3><i class="bi bi-graph-up"></i> <span data-i18n="revenue.revenueOverTime">Revenue Over Time</span></h3>
             <div class="chart-container chart-container-lg">
               <canvas id="revenueChart"></canvas>
             </div>
           </div>
           <div class="dash-card">
-            <h3><i class="bi bi-pie-chart"></i> Revenue by Plan</h3>
+            <h3><i class="bi bi-pie-chart"></i> <span data-i18n="revenue.revenueByPlan">Revenue by Plan</span></h3>
             <div class="chart-container chart-container-sm">
               <canvas id="planRevenueChart"></canvas>
             </div>
@@ -49,7 +49,7 @@
         </div>
 
         <div class="dash-card" style="margin-top:20px">
-          <h3><i class="bi bi-clock-history"></i> Recent Transactions</h3>
+          <h3><i class="bi bi-clock-history"></i> <span data-i18n="revenue.recentTransactions">Recent Transactions</span></h3>
           <div id="recentTransactions"><p class="text-muted">Loading...</p></div>
         </div>
       </div>
@@ -61,12 +61,15 @@
     import { requireAuth } from './js/auth.js';
     import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
     import { formatDate, formatCurrency, showToast } from './js/utils.js';
+    import { applyLang, t } from './js/i18n.js';
 
     (async () => {
       const user = await requireAuth();
+      applyLang();
       renderSidebar('revenue');
-      initTopbar('Revenue');
+      initTopbar(t('revenue.title'));
       pageTransition();
+      document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
       const { data: payments, error: pErr } = await supabase.from('payments').select('*, members:member_id(full_name)').order('paid_at', { ascending: false });
       if (pErr) { showToast('Error loading revenue data', 'error'); return; }
@@ -93,35 +96,35 @@
         <div class="stat-icon blue"><i class="bi bi-today"></i></div>
         <div class="stat-info">
           <div class="stat-number">${formatCurrency(todayRev)}</div>
-          <div class="stat-label">Today's Revenue</div>
+          <div class="stat-label" data-i18n="revenue.today">Today's Revenue</div>
         </div>
       </div>
       <div class="stat-card green">
         <div class="stat-icon green"><i class="bi bi-calendar-week"></i></div>
         <div class="stat-info">
           <div class="stat-number">${formatCurrency(weekRev)}</div>
-          <div class="stat-label">This Week</div>
+          <div class="stat-label" data-i18n="revenue.week">This Week</div>
         </div>
       </div>
       <div class="stat-card yellow">
         <div class="stat-icon yellow"><i class="bi bi-calendar-month"></i></div>
         <div class="stat-info">
           <div class="stat-number">${formatCurrency(monthRev)}</div>
-          <div class="stat-label">This Month</div>
+          <div class="stat-label" data-i18n="revenue.month">This Month</div>
         </div>
       </div>
       <div class="stat-card purple">
         <div class="stat-icon purple"><i class="bi bi-calendar-year"></i></div>
         <div class="stat-info">
           <div class="stat-number">${formatCurrency(yearRev)}</div>
-          <div class="stat-label">This Year</div>
+          <div class="stat-label" data-i18n="revenue.year">This Year</div>
         </div>
       </div>
       <div class="stat-card red">
         <div class="stat-icon red"><i class="bi bi-cash-stack"></i></div>
         <div class="stat-info">
           <div class="stat-number">${formatCurrency(totalRev)}</div>
-          <div class="stat-label">Total Revenue</div>
+          <div class="stat-label" data-i18n="revenue.total">Total Revenue</div>
         </div>
       </div>
     `;
@@ -193,7 +196,7 @@
         <div class="table-container" style="border:none;box-shadow:none">
           <div class="table-wrapper">
             <table class="table">
-              <thead><tr><th>Date</th><th>Member</th><th>Amount</th><th>Type</th><th>Method</th></tr></thead>
+              <thead><tr><th>${t('member.date')}</th><th>Member</th><th>${t('member.amount')}</th><th>${t('member.type')}</th><th>${t('member.method')}</th></tr></thead>
               <tbody>
                 ${paymentList.slice(0, 20).map(p => `
                   <tr>

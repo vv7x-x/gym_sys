@@ -26,12 +26,12 @@
       </header>
       <div class="page-content">
         <div class="page-header">
-          <h1>Membership Plans</h1>
-          <p>Manage your membership plans and pricing</p>
+          <h1 data-i18n="plans.title">Membership Plans</h1>
+          <p data-i18n="plans.subtitle">Manage your membership plans and pricing</p>
         </div>
 
         <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="addPlanBtn"><i class="bi bi-plus-lg"></i> Add Plan</button>
+          <button class="btn btn-primary" id="addPlanBtn"><i class="bi bi-plus-lg"></i> <span data-i18n="plans.add">Add Plan</span></button>
         </div>
 
         <div id="plansContainer"><p class="text-muted">Loading...</p></div>
@@ -44,11 +44,14 @@
     import { requireAuth } from './js/auth.js';
     import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
     import { formatCurrency, showConfirm, showToast, showModal } from './js/utils.js';
+    import { applyLang, t } from './js/i18n.js';
 
     const user = await requireAuth();
+    applyLang();
     renderSidebar('plans');
-    initTopbar('Plans');
+    initTopbar(t('plans.title'));
     pageTransition();
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     const container = document.getElementById('plansContainer');
 
@@ -85,7 +88,7 @@
       });
       document.querySelectorAll('.delete-plan').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const confirmed = await showConfirm('Delete Plan', 'Are you sure? Members assigned to this plan will not be affected.');
+          const confirmed = await showConfirm(t('plans.deleteConfirm'), t('plans.deleteMsg'));
           if (confirmed) {
             await supabase.from('plans').delete().eq('id', btn.dataset.id);
             showToast('Plan deleted');
@@ -100,31 +103,31 @@
       const html = `
         <form id="planForm">
           <div class="form-group">
-            <label>Plan Name <span class="required">*</span></label>
+            <label>${t('plans.name')} <span class="required">*</span></label>
             <input type="text" class="form-control" id="planName" required value="${plan?.name || ''}" placeholder="e.g. Premium Monthly">
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Duration (days) <span class="required">*</span></label>
+              <label>${t('plans.duration')} <span class="required">*</span></label>
               <input type="number" class="form-control" id="planDuration" required min="1" value="${plan?.duration_days || 30}">
             </div>
             <div class="form-group">
-              <label>Price <span class="required">*</span></label>
+              <label>${t('plans.price')} <span class="required">*</span></label>
               <input type="number" class="form-control" id="planPrice" required min="0" step="0.01" value="${plan?.price || ''}" placeholder="49.00">
             </div>
           </div>
           <div class="form-group">
-            <label>Description</label>
+            <label>${t('plans.description')}</label>
             <textarea class="form-control" id="planDescription" rows="2" placeholder="What's included...">${plan?.description || ''}</textarea>
           </div>
           <div class="form-group">
-            <label>Color</label>
+            <label>${t('plans.color')}</label>
             <input type="color" class="form-control" id="planColor" value="${plan?.color || '#3b82f6'}" style="height:44px;padding:4px">
           </div>
-          <button type="submit" class="btn btn-primary btn-full"><i class="bi bi-check-lg"></i> ${isEdit ? 'Update' : 'Create'} Plan</button>
+          <button type="submit" class="btn btn-primary btn-full"><i class="bi bi-check-lg"></i> ${isEdit ? t('plans.update') : t('plans.create')}</button>
         </form>`;
 
-      const { close } = showModal(isEdit ? 'Edit Plan' : 'Add Plan', html);
+      const { close } = showModal(isEdit ? t('plans.edit') : t('plans.add'), html);
 
       document.getElementById('planForm').addEventListener('submit', async (e) => {
         e.preventDefault();

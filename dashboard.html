@@ -32,39 +32,39 @@
 
       <div class="page-content">
         <div class="page-header">
-          <h1>Dashboard</h1>
-          <p>Your gym at a glance</p>
+          <h1 data-i18n="dashboard.title">Dashboard</h1>
+          <p data-i18n="dashboard.subtitle">Your gym at a glance</p>
         </div>
 
         <div class="stats-grid" id="statsGrid"></div>
 
         <div class="quick-actions">
-          <a href="add-member.html" class="btn btn-primary btn-lg"><i class="bi bi-person-plus"></i> Add Member</a>
-          <a href="members.html" class="btn btn-outline btn-lg"><i class="bi bi-people"></i> View Members</a>
-          <a href="revenue.html" class="btn btn-outline btn-lg"><i class="bi bi-currency-dollar"></i> Revenue</a>
-          <a href="plans.html" class="btn btn-outline btn-lg"><i class="bi bi-boxes"></i> Plans</a>
+          <a href="add-member.html" class="btn btn-primary btn-lg"><i class="bi bi-person-plus"></i> <span data-i18n="dashboard.addMember">Add Member</span></a>
+          <a href="members.html" class="btn btn-outline btn-lg"><i class="bi bi-people"></i> <span data-i18n="nav.members">View Members</span></a>
+          <a href="revenue.html" class="btn btn-outline btn-lg"><i class="bi bi-currency-dollar"></i> <span data-i18n="nav.revenue">Revenue</span></a>
+          <a href="plans.html" class="btn btn-outline btn-lg"><i class="bi bi-boxes"></i> <span data-i18n="nav.plans">Plans</span></a>
         </div>
 
         <div class="dash-grid">
           <div class="dash-card">
-            <h3><i class="bi bi-clock"></i> Recent Members</h3>
+            <h3><i class="bi bi-clock"></i> <span data-i18n="dashboard.recentMembers">Recent Members</span></h3>
             <div id="recentMembers"><p class="text-muted">Loading...</p></div>
           </div>
           <div class="dash-card">
-            <h3><i class="bi bi-exclamation-triangle"></i> Expiring Soon</h3>
+            <h3><i class="bi bi-exclamation-triangle"></i> <span data-i18n="dashboard.expiringSoon">Expiring Soon</span></h3>
             <div id="expiringSoon"><p class="text-muted">Loading...</p></div>
           </div>
         </div>
 
         <div class="dash-grid">
           <div class="dash-card">
-            <h3><i class="bi bi-graph-up"></i> Monthly Revenue</h3>
+            <h3><i class="bi bi-graph-up"></i> <span data-i18n="dashboard.monthlyRevenue">Monthly Revenue</span></h3>
             <div class="chart-container" style="height:280px">
               <canvas id="revenueChart"></canvas>
             </div>
           </div>
           <div class="dash-card">
-            <h3><i class="bi bi-pie-chart"></i> Membership Distribution</h3>
+            <h3><i class="bi bi-pie-chart"></i> <span data-i18n="dashboard.membershipDist">Membership Distribution</span></h3>
             <div class="chart-container" style="height:280px">
               <canvas id="planChart"></canvas>
             </div>
@@ -72,7 +72,7 @@
         </div>
 
         <div class="dash-card" style="margin-top:20px">
-          <h3><i class="bi bi-activity"></i> Recent Activity</h3>
+          <h3><i class="bi bi-activity"></i> <span data-i18n="dashboard.recentActivity">Recent Activity</span></h3>
           <div id="recentActivity"><p class="text-muted">Loading...</p></div>
         </div>
       </div>
@@ -84,13 +84,15 @@
     import { requireAuth } from './js/auth.js';
     import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
     import { formatDate, formatCurrency, getSubscriptionStatus, getStatusLabel, getStatusBadgeClass, calculateDaysRemaining, showToast } from './js/utils.js';
+    import { applyLang, t } from './js/i18n.js';
 
     (async () => {
       const user = await requireAuth();
       if (!user) { window.location.href = 'login.html'; return; }
 
+      applyLang();
       renderSidebar('dashboard');
-      initTopbar('Dashboard');
+      initTopbar(t('dashboard.title'));
       pageTransition();
 
       const { data: members, error: mErr } = await supabase.from('members').select('*').order('created_at', { ascending: false });
@@ -129,56 +131,56 @@
           <div class="stat-icon blue"><i class="bi bi-people"></i></div>
           <div class="stat-info">
             <div class="stat-number" id="statTotal">${memberList.length}</div>
-            <div class="stat-label">Total Members</div>
+            <div class="stat-label" data-i18n="dashboard.totalMembers">Total Members</div>
           </div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon green"><i class="bi bi-check-circle"></i></div>
           <div class="stat-info">
             <div class="stat-number">${activeSubs.length}</div>
-            <div class="stat-label">Active Subscriptions</div>
+            <div class="stat-label" data-i18n="dashboard.activeSubs">Active Subscriptions</div>
           </div>
         </div>
         <div class="stat-card yellow">
           <div class="stat-icon yellow"><i class="bi bi-clock"></i></div>
           <div class="stat-info">
             <div class="stat-number">${expiringSubs.length}</div>
-            <div class="stat-label">Expiring Soon</div>
+            <div class="stat-label" data-i18n="dashboard.expiringSoon">Expiring Soon</div>
           </div>
         </div>
         <div class="stat-card red">
           <div class="stat-icon red"><i class="bi bi-x-circle"></i></div>
           <div class="stat-info">
             <div class="stat-number">${expiredSubs.length}</div>
-            <div class="stat-label">Expired</div>
+            <div class="stat-label" data-i18n="dashboard.expired">Expired</div>
           </div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon green"><i class="bi bi-currency-dollar"></i></div>
           <div class="stat-info">
             <div class="stat-number">${formatCurrency(todayRevenue)}</div>
-            <div class="stat-label">Today's Revenue</div>
+            <div class="stat-label" data-i18n="dashboard.todayRevenue">Today's Revenue</div>
           </div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon blue"><i class="bi bi-calendar"></i></div>
           <div class="stat-info">
             <div class="stat-number">${formatCurrency(monthRevenue)}</div>
-            <div class="stat-label">This Month</div>
+            <div class="stat-label" data-i18n="dashboard.thisMonth">This Month</div>
           </div>
         </div>
         <div class="stat-card purple">
           <div class="stat-icon purple"><i class="bi bi-cash-stack"></i></div>
           <div class="stat-info">
             <div class="stat-number">${formatCurrency(totalRevenue)}</div>
-            <div class="stat-label">Total Revenue</div>
+            <div class="stat-label" data-i18n="dashboard.totalRevenue">Total Revenue</div>
           </div>
         </div>
         <div class="stat-card yellow">
           <div class="stat-icon yellow"><i class="bi bi-graph-up-arrow"></i></div>
           <div class="stat-info">
             <div class="stat-number">+${memberList.length > 0 ? Math.round((activeSubs.length / memberList.length) * 100) : 0}%</div>
-            <div class="stat-label">Active Rate</div>
+            <div class="stat-label" data-i18n="dashboard.activeRate">Active Rate</div>
           </div>
         </div>
       `;
@@ -188,11 +190,11 @@
       const recentContainer = document.getElementById('recentMembers');
       const sorted = [...memberList].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
       if (sorted.length === 0) {
-        recentContainer.innerHTML = '<p class="text-muted">No members yet</p>';
+        recentContainer.innerHTML = '<p class="text-muted">' + t('dashboard.noMembers') + '</p>';
       } else {
         recentContainer.innerHTML = sorted.map((m, i) => {
           const sub = subList.find(s => s.member_id === m.id);
-          const status = sub ? getStatusLabel(sub.status) : 'No Plan';
+          const status = sub ? getStatusLabel(sub.status) : t('member.noPlan');
           const badgeClass = sub ? getStatusBadgeClass(sub.status) : 'badge-info';
           return `
             <div class="recent-item" style="animation:fadeUp 0.3s ease ${i * 0.08}s both">
@@ -212,7 +214,7 @@
         .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
         .slice(0, 5);
       if (expiring.length === 0) {
-        expiringContainer.innerHTML = '<p class="text-muted">No members expiring soon</p>';
+        expiringContainer.innerHTML = '<p class="text-muted">' + t('dashboard.noExpiring') + '</p>';
       } else {
         expiringContainer.innerHTML = expiring.map((s, i) => {
           const m = memberList.find(mem => mem.id === s.member_id);
@@ -232,7 +234,7 @@
       const activityContainer = document.getElementById('recentActivity');
       const recentPayments = paymentList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
       if (recentPayments.length === 0) {
-        activityContainer.innerHTML = '<p class="text-muted">No recent activity</p>';
+        activityContainer.innerHTML = '<p class="text-muted">' + t('dashboard.noActivity') + '</p>';
       } else {
         activityContainer.innerHTML = recentPayments.map((p, i) => {
           const m = memberList.find(mem => mem.id === p.member_id);

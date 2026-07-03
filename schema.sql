@@ -184,4 +184,4 @@ INSERT INTO services (name, price, description) VALUES
   ('Cardio Zone', 15.00, 'Advanced cardio equipment access'),
   ('Massage', 40.00, 'Professional massage session');
 
-INSERT INTO settings (gym_name, currency, theme) VALUES ('GYMOS', 'USD', 'dark');
+INSERT INTO settings (gym_name, currency, theme) VALUES ('GYMOS', 'EGP', 'dark');

@@ -27,8 +27,8 @@
       </header>
       <div class="page-content">
         <div class="page-header">
-          <h1>Scan QR Code</h1>
-          <p>Point your camera at a member's QR code to view their profile</p>
+          <h1 data-i18n="scan.title">Scan QR Code</h1>
+          <p data-i18n="scan.subtitle">Point your camera at a member's QR code to view their profile</p>
         </div>
 
         <div class="scanner-container">
@@ -47,11 +47,14 @@
     import { requireAuth } from './js/auth.js';
     import { renderSidebar, initTopbar, pageTransition } from './js/ui.js';
     import { showToast } from './js/utils.js';
+    import { applyLang, t } from './js/i18n.js';
 
     const user = await requireAuth();
+    applyLang();
     renderSidebar('members');
-    initTopbar('Scan QR');
+    initTopbar(t('scan.title'));
     pageTransition();
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     let html5QrCode = null;
 

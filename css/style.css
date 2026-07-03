@@ -5,10 +5,12 @@
    ============================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
 @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css');
 
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-arabic: 'Tajawal', 'Noto Kufi Arabic', 'Segoe UI', sans-serif;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -154,6 +156,7 @@ ul, ol { list-style: none; }
 table { border-collapse: collapse; width: 100%; }
 ::selection { background: var(--primary); color: #fff; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+[data-lang="ar"] body, [data-lang="ar"] input, [data-lang="ar"] select, [data-lang="ar"] button, [data-lang="ar"] textarea { font-family: var(--font-arabic); }
 
 /* ========== Scrollbar ========== */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -2121,6 +2124,63 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .sidebar-nav a { padding: 8px 14px; }
   .login-page { min-height: auto; padding: 40px 20px; }
   .modal { max-height: 80vh; }
+}
+
+/* RTL Support */
+[dir="rtl"] .sidebar { right: 0; left: auto; border-right: none; border-left: 1px solid var(--border); }
+[dir="rtl"] .main-content { margin-left: 0; margin-right: var(--sidebar-w); }
+[dir="rtl"] .topbar-left { flex-direction: row-reverse; }
+[dir="rtl"] .search-wrapper i { left: auto; right: 14px; }
+[dir="rtl"] .search-wrapper input { padding-left: 14px; padding-right: 40px; }
+[dir="rtl"] .form-row { flex-direction: row-reverse; }
+[dir="rtl"] .recent-item { flex-direction: row-reverse; }
+[dir="rtl"] .member-card-top { flex-direction: row-reverse; }
+[dir="rtl"] .member-card-actions { flex-direction: row-reverse; }
+[dir="rtl"] .pagination { flex-direction: row-reverse; }
+[dir="rtl"] .stat-card { flex-direction: row-reverse; }
+[dir="rtl"] .profile-header { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] .profile-info-item { text-align: right; }
+[dir="rtl"] .profile-info-item .label { text-align: right; }
+[dir="rtl"] .profile-actions { flex-direction: row-reverse; }
+[dir="rtl"] .table th,
+[dir="rtl"] .table td { text-align: right; }
+[dir="rtl"] .quick-actions { flex-direction: row-reverse; }
+[dir="rtl"] .sidebar-nav a { flex-direction: row-reverse; }
+[dir="rtl"] .dash-card h3 { flex-direction: row-reverse; }
+[dir="rtl"] .topbar-right { flex-direction: row-reverse; }
+[dir="rtl"] .page-header { text-align: right; }
+[dir="rtl"] .filter-bar { flex-direction: row-reverse; }
+[dir="rtl"] .pricing-card { text-align: right; }
+[dir="rtl"] .member-card-row { flex-direction: row-reverse; }
+[dir="rtl"] .footer-inner { flex-direction: row-reverse; }
+[dir="rtl"] .hero-content { text-align: right; }
+[dir="rtl"] .hero-buttons { justify-content: flex-start; flex-direction: row-reverse; }
+[dir="rtl"] .features-grid { direction: rtl; }
+[dir="rtl"] .nav-label { text-align: right; }
+[dir="rtl"] .profile-section h3 { flex-direction: row-reverse; }
+[dir="rtl"] .service-tokens { flex-direction: row-reverse; }
+[dir="rtl"] .toast { right: auto; left: 20px; }
+
+/* RTL Mobile */
+@media (max-width: 768px) {
+  [dir="rtl"] .sidebar { transform: translateX(100%); }
+  [dir="rtl"] .sidebar.open { transform: translateX(0); }
+  [dir="rtl"] .main-content { margin-right: 0; }
+  [dir="rtl"] .mobile-toggle { margin-left: 0; margin-right: auto; }
+  [dir="rtl"] .filter-bar { flex-direction: column; }
+  [dir="rtl"] .quick-actions { flex-direction: column; }
+  [dir="rtl"] .member-card-actions { flex-direction: column; }
+  [dir="rtl"] .profile-actions { flex-direction: column; }
+  [dir="rtl"] .profile-header { flex-direction: column; }
+  [dir="rtl"] .hero-buttons { flex-direction: column; align-items: center; }
+  [dir="rtl"] .hero-content { text-align: center; }
+}
+@media (max-width: 480px) {
+  [dir="rtl"] .filter-bar { flex-direction: column; }
+  [dir="rtl"] .quick-actions { flex-direction: column; }
+  [dir="rtl"] .member-card-actions { flex-direction: column; }
+  [dir="rtl"] .profile-actions { flex-direction: column; }
+  [dir="rtl"] .hero-buttons { flex-direction: column; align-items: center; }
 }
 
 /* Print */

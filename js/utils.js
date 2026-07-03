@@ -1,10 +1,11 @@
 import { supabase } from './supabase.js';
 import { STORAGE_BUCKET } from './config.js';
 
-export function formatDate(dateStr) {
+export function formatDate(dateStr, lang) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  const l = lang || getUILang();
+  return d.toLocaleDateString(l === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function formatDateISO(date) {
@@ -12,8 +13,14 @@ export function formatDateISO(date) {
   return d.toISOString().split('T')[0];
 }
 
-export function formatCurrency(amount, currency = 'USD') {
+export function formatCurrency(amount, currency = 'EGP') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+}
+
+const STORAGE_KEY = 'gymos_prefs';
+function getUILang() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY))?.lang || 'en'; }
+  catch { return 'en'; }
 }
 
 export function calculateEndDate(startDate, durationDays) {

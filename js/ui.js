@@ -1,4 +1,5 @@
 import { signOut } from './auth.js';
+import { t, getLang, setLang, applyLang } from './i18n.js';
 
 const STORAGE_KEY = 'gymos_prefs';
 
@@ -86,15 +87,15 @@ export function renderSidebar(activePage) {
 
   const sections = [
     { label: 'Main Menu' },
-    { id: 'dashboard', icon: 'bi-grid-1x2', label: 'Dashboard', href: 'dashboard.html' },
-    { id: 'members', icon: 'bi-people', label: 'Members', href: 'members.html' },
-    { id: 'plans', icon: 'bi-boxes', label: 'Plans', href: 'plans.html' },
-    { id: 'services', icon: 'bi-gear', label: 'Services', href: 'services.html' },
+    { id: 'dashboard', icon: 'bi-grid-1x2', label: () => t('nav.dashboard'), href: 'dashboard.html' },
+    { id: 'members', icon: 'bi-people', label: () => t('nav.members'), href: 'members.html' },
+    { id: 'plans', icon: 'bi-boxes', label: () => t('nav.plans'), href: 'plans.html' },
+    { id: 'services', icon: 'bi-gear', label: () => t('nav.services'), href: 'services.html' },
     { label: 'Finance' },
-    { id: 'revenue', icon: 'bi-currency-dollar', label: 'Revenue', href: 'revenue.html' },
-    { id: 'reports', icon: 'bi-file-earmark-bar-graph', label: 'Reports', href: 'reports.html' },
+    { id: 'revenue', icon: 'bi-currency-dollar', label: () => t('nav.revenue'), href: 'revenue.html' },
+    { id: 'reports', icon: 'bi-file-earmark-bar-graph', label: () => t('nav.reports'), href: 'reports.html' },
     { label: 'System' },
-    { id: 'settings', icon: 'bi-sliders', label: 'Settings', href: 'settings.html' },
+    { id: 'settings', icon: 'bi-sliders', label: () => t('nav.settings'), href: 'settings.html' },
   ];
 
   nav.innerHTML = sections.map(s => {
@@ -102,7 +103,7 @@ export function renderSidebar(activePage) {
       return `<div class="nav-label">${s.label}</div>`;
     }
     const active = s.id === activePage ? 'active' : '';
-    return `<a href="${s.href}" class="${active}"><i class="bi ${s.icon}"></i> ${s.label}</a>`;
+    return `<a href="${s.href}" class="${active}"><i class="bi ${s.icon}"></i> ${s.label()}</a>`;
   }).join('');
 
   initMobileToggle();
@@ -116,6 +117,9 @@ export function initTopbar(pageTitle) {
   const right = document.querySelector('.topbar-right');
   if (right && !right.hasChildNodes()) {
     right.innerHTML = `
+      <button class="btn btn-ghost btn-icon lang-toggle-btn" title="Toggle language">
+        <i class="bi bi-translate"></i>
+      </button>
       <button class="btn btn-ghost btn-icon theme-toggle-btn" title="Toggle theme">
         <i class="bi ${getTheme() === 'dark' ? 'bi-sun' : 'bi-moon'} theme-toggle-icon"></i>
       </button>
@@ -124,7 +128,19 @@ export function initTopbar(pageTitle) {
       </button>`;
     initThemeToggle();
     initLogout();
+    initLangToggle();
   }
+}
+
+export function initLangToggle() {
+  const btns = document.querySelectorAll('.lang-toggle-btn');
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newLang = getLang() === 'ar' ? 'en' : 'ar';
+      setLang(newLang);
+      window.location.reload();
+    });
+  });
 }
 
 export function pageTransition() {

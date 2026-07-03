@@ -40,6 +40,9 @@
     <p class="login-footer-text">Powered by Supabase</p>
 
     <div class="login-actions">
+      <button class="btn btn-ghost btn-icon lang-toggle-btn" title="Toggle language">
+        <i class="bi bi-translate"></i>
+      </button>
       <button class="btn btn-ghost btn-icon theme-toggle-btn" title="Toggle theme">
         <i class="bi bi-moon theme-toggle-icon"></i>
       </button>
@@ -51,6 +54,7 @@
 
   <script type="module">
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './js/config.js';
+    import { applyLang, t, getLang, setLang } from './js/i18n.js';
 
     if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
       document.body.innerHTML = `
@@ -67,6 +71,7 @@
 
       const prefs = JSON.parse(localStorage.getItem('gymos_prefs') || '{}');
       if (prefs.theme) document.documentElement.setAttribute('data-theme', prefs.theme);
+      applyLang();
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session) window.location.href = 'dashboard.html';
@@ -79,6 +84,14 @@
         prefs2.theme = next;
         localStorage.setItem('gymos_prefs', JSON.stringify(prefs2));
         document.querySelector('.theme-toggle-icon').className = `bi ${next === 'dark' ? 'bi-sun' : 'bi-moon'} theme-toggle-icon`;
+      });
+
+      document.querySelectorAll('.lang-toggle-btn')?.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const newLang = getLang() === 'ar' ? 'en' : 'ar';
+          setLang(newLang);
+          window.location.reload();
+        });
       });
 
       document.getElementById('loginForm').addEventListener('submit', async (e) => {
